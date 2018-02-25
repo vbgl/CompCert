@@ -53,6 +53,7 @@ Require Asmgen.
 Require SimplExprproof.
 Require SimplLocalsproof.
 Require Cshmgenproof.
+Require Gigotproof.
 Require Cminorgenproof.
 Require Selectionproof.
 Require RTLgenproof.
@@ -158,6 +159,7 @@ Definition transf_clight_program (p: Clight.program) : res Asm.program :=
    @@ print print_Clight
   @@@ time "Simplification of locals" SimplLocals.transf_program
   @@@ time "C#minor generation" Cshmgen.transl_program
+  @@ time "Gigot optimization" Gigot.transl_program
   @@@ time "Cminor generation" Cminorgen.transl_program
   @@@ transf_cminor_program.
 
@@ -232,6 +234,7 @@ Definition CompCert's_passes :=
       mkpass SimplExprproof.match_prog
   ::: mkpass SimplLocalsproof.match_prog
   ::: mkpass Cshmgenproof.match_prog
+  ::: mkpass Gigotproof.match_prog
   ::: mkpass Cminorgenproof.match_prog
   ::: mkpass Selectionproof.match_prog
   ::: mkpass RTLgenproof.match_prog
@@ -273,7 +276,7 @@ Proof.
   unfold transf_clight_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
   destruct (SimplLocals.transf_program p1) as [p2|e] eqn:P2; simpl in T; try discriminate.
   destruct (Cshmgen.transl_program p2) as [p3|e] eqn:P3; simpl in T; try discriminate.
-  destruct (Cminorgen.transl_program p3) as [p4|e] eqn:P4; simpl in T; try discriminate.
+  destruct (Cminorgen.transl_program _) as [p4|e] eqn:P4; simpl in T; try discriminate.
   unfold transf_cminor_program, time in T. rewrite ! compose_print_identity in T. simpl in T.
   destruct (Selection.sel_program p4) as [p5|e] eqn:P5; simpl in T; try discriminate.
   destruct (RTLgen.transl_program p5) as [p6|e] eqn:P6; simpl in T; try discriminate.
@@ -296,6 +299,7 @@ Proof.
   exists p1; split. apply SimplExprproof.transf_program_match; auto.
   exists p2; split. apply SimplLocalsproof.match_transf_program; auto.
   exists p3; split. apply Cshmgenproof.transf_program_match; auto.
+  exists (Gigot.transl_program p3); split. apply Gigotproof.transl_program_match; auto.
   exists p4; split. apply Cminorgenproof.transf_program_match; auto.
   exists p5; split. apply Selectionproof.transf_program_match; auto.
   exists p6; split. apply RTLgenproof.transf_program_match; auto.
@@ -364,7 +368,7 @@ Ltac DestructM :=
       destruct H as (p & M & MM); clear H
   end.
   repeat DestructM. subst tp.
-  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p21)).
+  assert (F: forward_simulation (Cstrategy.semantics p) (Asm.semantics p22)).
   {
   eapply compose_forward_simulations.
     eapply SimplExprproof.transl_program_correct; eassumption.
@@ -373,7 +377,9 @@ Ltac DestructM :=
   eapply compose_forward_simulations.
     eapply Cshmgenproof.transl_program_correct; eassumption.
   eapply compose_forward_simulations.
-    eapply Cminorgenproof.transl_program_correct; eassumption.
+    apply Gigotproof.transl_program_correct; eassumption.
+  eapply compose_forward_simulations.
+    eapply Cminorgenproof.transl_program_correct. eassumption.
   eapply compose_forward_simulations.
     eapply Selectionproof.transf_program_correct; eassumption.
   eapply compose_forward_simulations.
