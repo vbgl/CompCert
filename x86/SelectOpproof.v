@@ -873,6 +873,8 @@ Proof.
   InvEval. TrivialExists.
   destruct x; simpl in H0; try discriminate. inv H0.
   exists (Vfloat (Float.of_intu i)); split; auto.
+  destruct Archi.splitlong.
+  +
   econstructor. eauto.
   set (fm := Float.of_intu Float.ox8000_0000).
   assert (eval_expr ge sp e m (Vint i :: le) (Eletvar O) (Vint i)).
@@ -889,6 +891,10 @@ Proof.
   constructor. EvalOp. simpl; eauto. constructor. simpl; eauto.
   fold fm. rewrite Float.of_intu_of_int_2; auto.
   rewrite Int.sub_add_opp. auto.
+  +
+  econstructor.
+    econstructor. now EvalOp. econstructor.
+    rewrite Float.of_intu_of_long; reflexivity.
 Qed.
 
 Theorem eval_intofsingle:
